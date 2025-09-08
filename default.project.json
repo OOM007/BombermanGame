@@ -4,8 +4,23 @@
     "$className": "DataModel",
 
     "ReplicatedStorage": {
-      "Modules": {
-        "$path": "src/Modules"
+      "Scriptables": {
+        "$path": "src/Scriptables",
+        "Camera": {
+          "$path": "src/Scriptables/Camera",
+          "Effects": {
+            "$path": "src/Scriptables/Camera/Effects"
+          },
+          "Modes": {
+            "$path": "src/Scriptables/Camera/Modes"
+          }
+        },
+        "Modules": {
+          "$path": "src/Scriptables/Modules"
+        },
+        "Utils": {
+          "$path": "src/Scriptables/Utils"
+        }
       }
     },
 

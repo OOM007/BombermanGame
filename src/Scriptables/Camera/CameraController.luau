@@ -1,0 +1,96 @@
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Camera = game:GetService("Workspace").CurrentCamera
+
+local CameraController = {}
+CameraController.__index = CameraController
+
+function CameraController.new(player: Player, camera: Camera)
+	local self = setmetatable({}, CameraController)
+	self.player = player
+	self.camera = camera
+	self.mode = nil
+	self.effects = {}
+	self.IsActive = false
+	
+	return self
+end
+
+-- setting up mode of the camera
+function CameraController:SetMode(modeModule)
+	if self.mode then
+		pcall(function() self.mode:Exit() end) -- catching possible errors
+	end
+	
+	local ok, modeOrErr = pcall(function() -- mode or Err: Returns mode if there wasn't any errors. Otherwise it is an error code
+		return modeModule.new(self.player)
+	end)
+	
+	if ok and modeOrErr then
+		self.mode = modeOrErr
+		self.mode:Enter(self.player)
+	else
+		warn("[CamerraController] failed to load mode:", modeOrErr)
+		self:RestoreDefaultCamera() 
+	end
+end
+
+-- effects for the camera (explosion, fatigue, etc.)
+function CameraController:AddEffect(effect: Enum)
+	table.insert(self.effects, effect)
+end
+
+-- update cycle
+function CameraController:Update(dt: number) 
+	if not self.mode then return end -- if mode is not set, break the execution
+	
+	local camera = self.camera
+	
+	local ok, camCFrame, CamSettings = pcall(function() -- catching possible errors
+		return self.mode:Update(dt, self.player) 
+	end)
+	
+	if not ok then
+		warn("[CameraController] mode error, restoring default camera:", camCFrame)
+		self:RestoreDefaultCamera()
+		return
+	end
+	
+	for _, effect in self.effects  do
+		
+		local ok, c, p = pcall(function() -- in case of error, c is an error code. otherwise it is a CFrame for next frame
+			return effect:Apply(camCFrame, CamSettings, dt)
+		end)
+		
+		if ok then
+			camCFrame, CamSettings = c, p -- setting camCFrmae and CamSettings with values returned from error handling function
+			if effect:IsFinished() then
+				table.remove(self.effects, table.find(self.effects, effect))
+			end
+		else
+			warn("[CamerraController] failed to apply effect:", c)
+			table.remove(self.effects, table.find(self.effects, effect))
+		end
+	end
+	
+	camera.CameraType = Enum.CameraType.Scriptable
+	camera.CFrame = camCFrame
+	camera.FieldOfView = CamSettings.FOV or camera.FieldOfView
+end
+
+-- restores default roblox camera settings
+function CameraController:RestoreDefaultCamera()
+	RunService:UnbindFromRenderStep("CustomCamera")
+	Camera.CameraType = Enum.CameraType.Custom
+	self.mode = nil
+	self.IsActive = false
+end
+
+-- start the camera
+function CameraController:Start()
+	RunService:BindToRenderStep("CustomCamera", Enum.RenderPriority.Camera.Value, function(dt)
+		self:Update(dt)
+	end)
+end
+
+return CameraController

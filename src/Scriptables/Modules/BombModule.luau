@@ -3,8 +3,9 @@ local meta = {}
 meta.__index = meta
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local EffectControl = require(ReplicatedStorage.Modules.EffectControl) -- requiring effect module
-local CombatModule = require(ReplicatedStorage.Modules.CombatModule) -- requiring combat module
+local EffectControl = require(ReplicatedStorage.Scriptables.Modules.EffectControl) -- requiring effect module
+local CombatModule = require(ReplicatedStorage.Scriptables.Modules.CombatModule) -- requiring combat module
+local TableUtil = require(ReplicatedStorage.Scriptables.Utils.TableUtil)
 
 local BOMB = ReplicatedStorage.Models.Bomb -- link to the bomb model
 
@@ -41,21 +42,26 @@ function meta:Explode(bomb: table)
 	if bomb and bomb.instance.PrimaryPart then
 		local ExplodedCells = {}
 		
-		EffectControl.explosion(bomb.instance.PrimaryPart.Position) -- calling explosion function
 		bomb.instance:Destroy() -- destroying the bomb instance
 		
 		local gridPos = self.grid:GetCellPosition(bomb.pos)
 		
-		self:DestroyInDirection(gridPos, Vector2.new(1, 0), bomb.range)
-		self:DestroyInDirection(gridPos, Vector2.new(0, 1), bomb.range)
-		self:DestroyInDirection(gridPos, Vector2.new(-1, 0), bomb.range)
-		self:DestroyInDirection(gridPos, Vector2.new(0, -1), bomb.range)
+		table.insert(ExplodedCells, {pos = gridPos, state = 0})
+		
+		TableUtil.InsertTableInTable(ExplodedCells, self:DestroyInDirection(gridPos, Vector2.new(1, 0), bomb.range))
+		TableUtil.InsertTableInTable(ExplodedCells, self:DestroyInDirection(gridPos, Vector2.new(0, 1), bomb.range))
+		TableUtil.InsertTableInTable(ExplodedCells, self:DestroyInDirection(gridPos, Vector2.new(-1, 0), bomb.range))
+		TableUtil.InsertTableInTable(ExplodedCells, self:DestroyInDirection(gridPos, Vector2.new(0, -1), bomb.range))
+		
+		return ExplodedCells
 	end
 end
 
-
+-- fix: Code doesn't check the middle cell (done, kinda)
 function meta:DestroyInDirection(startPos: Vector2, dir: Vector2, range: number)
 	local pos = startPos
+	local coords = {} -- coordinates of destroyed cells
+	
 	for i = 1, range do
 		pos = pos + dir
 		
@@ -66,27 +72,29 @@ function meta:DestroyInDirection(startPos: Vector2, dir: Vector2, range: number)
 			break
 		end
 		
-		--if the position is a box, destroy it
-		if state == 2 then
-			self.grid:ClearCell(pos)
-		end
-		
-		local worldPos = self.grid:GetWorldPosition(pos)
-		EffectControl.explosion(worldPos)
-		CombatModule:ApplyExplosionDamage(worldPos, self.grid.cell / 2)
+		table.insert(coords, {pos = pos, state = state}) -- inserting coordinates to the table
 	end
+	
+	return coords
+	
 end
 
 -- updating the queue and exploding the bomb if the timer is up
 function meta:Update(grid)
 	local now = os.clock()
+	local explosions = {}
+	local exploded = false
+	
 	for i=#self.queue, 1, -1 do
 		local bomb = self.queue[i]
 		if now >= bomb.explodeAt then
-			self:Explode(bomb)
+			explosions = self:Explode(bomb)
+			exploded = true
 			table.remove(self.queue, i)
 		end
 	end
+	
+	return exploded, explosions
 end
 
 return BombModule
