@@ -8,21 +8,20 @@ function CombatModule:ApplyExplosionDamage(pos: Vector3, radius: number)
 		math.floor(pos.Z/radius+0.5)
 	)
 
-	-- iterating through each player
 	for _, player in pairs(game.Players:GetPlayers()) do
 		local Character = player.Character
 		local Humanoid = Character:FindFirstChild("Humanoid")
 		local PrimaryPart = Character.PrimaryPart
 
 		if Humanoid and PrimaryPart then
-			local playerGridPos = Vector2.new( -- position of a player in the grid of radius n
+			local playerGridPos = Vector2.new(
 				math.floor(PrimaryPart.Position.X/radius+0.5),
 				math.floor(PrimaryPart.Position.Z/radius+0.5)
 			)
 			
 			if playerGridPos.X == cell.X and playerGridPos.Y == cell.Y then
 				table.insert(killedPlayers, player)
-				Humanoid.Health = 0 -- kills player
+				Humanoid.Health = 0
 			end
 		end
 

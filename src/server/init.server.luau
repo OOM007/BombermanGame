@@ -22,7 +22,6 @@ local gridSize = 8
 local grid = GridModule.new(Vector3.new(48, 2, -32), Vector2.new(11, 17), gridSize)
 local bomb = BombModule.new(grid)
 
--- Initialising the grid and spawning the field
 grid:InitiateGrid()
 grid:SpawnField()
 
@@ -55,11 +54,11 @@ RunService.Heartbeat:Connect(function(dt)
 				grid:ClearCell(info.pos) -- clearing destroyed cells
 			end
 			
-			EffectControl.explosion(worldPos) -- applying effects om the affected cells
-			local killed = CombatModule:ApplyExplosionDamage(worldPos, gridSize) -- applying explosion damage and getting affected players
+			EffectControl.explosion(worldPos)
+			local killed = CombatModule:ApplyExplosionDamage(worldPos, gridSize)
 			
 			for _, player in pairs(killed) do
-				PlayerKilledEvent:FireClient(player) -- firing clients for changing their state
+				PlayerKilledEvent:FireClient(player)
 			end
 		end
 	end

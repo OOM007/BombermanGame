@@ -15,17 +15,14 @@ local BombExplosion = ReplicatedStorage.Events.BombExplosion
 local PlayerKilledEvent = ReplicatedStorage.Events:FindFirstChild("PlayerKilled")
 
 
--- client variables
 local status = 0 -- status of the player, 0 = waiting, 1 = in game, 2 = dead
 
 -- initiating camera
 local controller = CameraController.new(player, workspace.CurrentCamera)
 controller:SetMode(FollowMode)
 
--- starting the controller of the camera
 controller:Start()
 
--- sends request to server to spawn the bomb
 InputServise.InputBegan:Connect(function(input, gameProcessed)
 	if not gameProcessed and input.KeyCode == Enum.KeyCode.B then
 		game.ReplicatedStorage.Events.BombSpawn:FireServer() -- triggers the bomb spawn on server side

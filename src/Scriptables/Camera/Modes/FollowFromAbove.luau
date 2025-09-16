@@ -10,11 +10,10 @@ function FollowFromAbove.new(player)
 	return self
 end
 
-function FollowFromAbove:Enter() end -- needed for general interface
+function FollowFromAbove:Enter() end
 
 function FollowFromAbove:Exit() end
 
--- gets the camera CFrame and settings based on dt and current data
 function FollowFromAbove:Update(dt: number, player: Player)
 	local character = player.Character
 	

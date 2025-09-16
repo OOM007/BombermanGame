@@ -3,13 +3,12 @@ local meta = {}
 meta.__index = meta
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local EffectControl = require(ReplicatedStorage.Scriptables.Modules.EffectControl) -- requiring effect module
-local CombatModule = require(ReplicatedStorage.Scriptables.Modules.CombatModule) -- requiring combat module
+local EffectControl = require(ReplicatedStorage.Scriptables.Modules.EffectControl)
+local CombatModule = require(ReplicatedStorage.Scriptables.Modules.CombatModule)
 local TableUtil = require(ReplicatedStorage.Scriptables.Utils.TableUtil)
 
-local BOMB = ReplicatedStorage.Models.Bomb -- link to the bomb model
+local BOMB = ReplicatedStorage.Models.Bomb
 
--- initialising bomb handler module
 function BombModule.new(grid)
 	local self = setmetatable ({}, meta)
 	self.queue = {}
@@ -18,7 +17,6 @@ function BombModule.new(grid)
 	return self
 end
 
---spawning bomb at the designated location and adding it to the queue
 function meta:SpawnBomb(pos:Vector3, fuseTime:number, explosionPower:number)
 	local bomb = BOMB:Clone()
 	bomb.Parent = game.Workspace
@@ -37,12 +35,11 @@ function meta:SpawnBomb(pos:Vector3, fuseTime:number, explosionPower:number)
 	return bomb
 end
 
--- exploding the bomb
 function meta:Explode(bomb: table)
 	if bomb and bomb.instance.PrimaryPart then
 		local ExplodedCells = {}
 		
-		bomb.instance:Destroy() -- destroying the bomb instance
+		bomb.instance:Destroy()
 		
 		local gridPos = self.grid:GetCellPosition(bomb.pos)
 		
@@ -57,7 +54,6 @@ function meta:Explode(bomb: table)
 	end
 end
 
--- fix: Code doesn't check the middle cell (done, kinda)
 function meta:DestroyInDirection(startPos: Vector2, dir: Vector2, range: number)
 	local pos = startPos
 	local coords = {} -- coordinates of destroyed cells
@@ -72,14 +68,13 @@ function meta:DestroyInDirection(startPos: Vector2, dir: Vector2, range: number)
 			break
 		end
 		
-		table.insert(coords, {pos = pos, state = state}) -- inserting coordinates to the table
+		table.insert(coords, {pos = pos, state = state})
 	end
 	
 	return coords
 	
 end
 
--- updating the queue and exploding the bomb if the timer is up
 function meta:Update(grid)
 	local now = os.clock()
 	local explosions = {}

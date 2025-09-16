@@ -7,18 +7,16 @@ function GridModule.new(gridOrigin:Vector3, gridSize:Vector2, cellSize:number)
 	setmetatable(self, meta)
 	
 	self.origin = gridOrigin -- 0,0 position of the grid
-	self.size = gridSize -- saze of the grid in cells
-	self.cell = cellSize -- size of a cell (usefull for finding positions)
+	self.size = gridSize
+	self.cell = cellSize
 	
 	self.data = {} -- 2D array of the grid
 	
-	-- 2D arrays to store instances of the grid
 	self.instances = {}
 	
 	return self
 end
 
--- function to generate 2D map for the game field
 function meta:InitiateGrid()
 	for x = 1, self.size.X do
 		self.data[x] = {}
@@ -35,7 +33,6 @@ function meta:InitiateGrid()
 	end
 end
 
--- Gets world position based on grid position
 function meta:GetWorldPosition(gridPos:Vector2)
 	local x = self.origin.X + (gridPos.X - 1) * self.cell
 	local y = self.origin.Z + (gridPos.Y - 1) * self.cell
@@ -43,7 +40,6 @@ function meta:GetWorldPosition(gridPos:Vector2)
 	return Vector3.new(x, self.origin.Y, y)
 end
 
--- Get cell position based on world position
 function meta:GetCellPosition(worldPos:Vector3)
 	local x = math.floor((worldPos.X - self.origin.X) / self.cell) + 1
 	local y = math.floor((worldPos.Z - self.origin.Z) / self.cell) + 1
@@ -51,7 +47,6 @@ function meta:GetCellPosition(worldPos:Vector3)
 	return Vector2.new(x, y)
 end
 
--- state of the chosen cell
 function meta:GetState(gridPos:Vector2)
 	local state = nil
 	if gridPos.X > 0 and gridPos.X <= self.size.X then
@@ -61,7 +56,6 @@ function meta:GetState(gridPos:Vector2)
 	return state
 end
 
--- spawns gamefield (or resets it)
 function meta:SpawnField()
 	self.instances = {}
 	
@@ -91,7 +85,6 @@ function meta:SpawnField()
 	end
 end
 
--- set the cell state to 0 and clears its instance in the world
 function meta:ClearCell(cellPos:Vector2)
 	self.data[cellPos.X][cellPos.Y] = 0
 	

@@ -40,13 +40,12 @@ function CameraController:AddEffect(effect: Enum)
 	table.insert(self.effects, effect)
 end
 
--- update cycle
 function CameraController:Update(dt: number) 
-	if not self.mode then return end -- if mode is not set, break the execution
+	if not self.mode then return end
 	
 	local camera = self.camera
 	
-	local ok, camCFrame, CamSettings = pcall(function() -- catching possible errors
+	local ok, camCFrame, CamSettings = pcall(function()
 		return self.mode:Update(dt, self.player) 
 	end)
 	
@@ -78,7 +77,6 @@ function CameraController:Update(dt: number)
 	camera.FieldOfView = CamSettings.FOV or camera.FieldOfView
 end
 
--- restores default roblox camera settings
 function CameraController:RestoreDefaultCamera()
 	RunService:UnbindFromRenderStep("CustomCamera")
 	Camera.CameraType = Enum.CameraType.Custom
@@ -86,7 +84,6 @@ function CameraController:RestoreDefaultCamera()
 	self.IsActive = false
 end
 
--- start the camera
 function CameraController:Start()
 	RunService:BindToRenderStep("CustomCamera", Enum.RenderPriority.Camera.Value, function(dt)
 		self:Update(dt)
