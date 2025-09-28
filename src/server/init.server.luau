@@ -2,13 +2,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
--- requiring Modules
 local BombModule = require(ReplicatedStorage.Scriptables.Modules.BombModule)
 local GridModule = require(ReplicatedStorage.Scriptables.Modules.GridModule)
 local EffectControl = require(ReplicatedStorage.Scriptables.Modules.EffectControl)
 local CombatModule = require(ReplicatedStorage.Scriptables.Modules.CombatModule)
+local RoundManager = require(ReplicatedStorage.Scriptables.Modules.RoundManager)
 
--- RemoteEvents
 local BombSpawnEvent = ReplicatedStorage.Events:FindFirstChild("BombSpawn")
 local BombExplosionEvent = ReplicatedStorage.Events:FindFirstChild("BombExplosion")
 local PlayerKilledEvent = ReplicatedStorage.Events:FindFirstChild("PlayerKilled")
@@ -18,14 +17,18 @@ local bombRange = 2
 local bombTimer = 2
 local gridSize = 8
 
--- making and initialising the grid and the bomb handler
+
 local grid = GridModule.new(Vector3.new(48, 2, -32), Vector2.new(11, 17), gridSize)
 local bomb = BombModule.new(grid)
 
-grid:InitiateGrid()
-grid:SpawnField()
 
--- spawn handler (when player presses the button, it spawns the bomb at the location)
+local roundManager = RoundManager.new(grid, Vector3.new(86, 2, -86), 60)
+
+
+-- testing
+roundManager:StartIntermission(5)
+
+
 BombSpawnEvent.OnServerEvent:Connect(function(player)
 	local playerPos = player.Character.PrimaryPart.Position
 	local fieldPos = {grid.origin, grid:GetWorldPosition(grid.size)}
@@ -38,12 +41,12 @@ BombSpawnEvent.OnServerEvent:Connect(function(player)
 	end
 end)
 
--- bomb update loop (updates the bomb queue every frame)
+-- bomb update loop
 RunService.Heartbeat:Connect(function(dt)
 	local exploded, infoList = bomb:Update(grid)
 	
 	if exploded then
-		BombExplosionEvent:FireAllClients("BombExploded") -- firing clients for explosion effect
+		BombExplosionEvent:FireAllClients("BombExploded")
 	end
 	
 	for _, info in ipairs(infoList) do
@@ -51,13 +54,14 @@ RunService.Heartbeat:Connect(function(dt)
 			local worldPos = grid:GetWorldPosition(info.pos)
 			
 			if info.state == 2 then
-				grid:ClearCell(info.pos) -- clearing destroyed cells
+				grid:ClearCell(info.pos)
 			end
 			
 			EffectControl.explosion(worldPos)
 			local killed = CombatModule:ApplyExplosionDamage(worldPos, gridSize)
 			
 			for _, player in pairs(killed) do
+				roundManager:MarkAlive(player, false)
 				PlayerKilledEvent:FireClient(player)
 			end
 		end

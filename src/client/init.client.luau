@@ -4,32 +4,28 @@ local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
 
--- setting up camera controller and modes required
 local CameraController = require(ReplicatedStorage.Scriptables.Camera.CameraController)
 local FollowMode = require(ReplicatedStorage.Scriptables.Camera.Modes.FollowFromAbove)
 local ExplosionEffect = require(ReplicatedStorage.Scriptables.Camera.Effects.ExplosionEffect)
 
 
--- Server events
 local BombExplosion = ReplicatedStorage.Events.BombExplosion
+local RoundEvent = ReplicatedStorage.Events.RoundEvent
 local PlayerKilledEvent = ReplicatedStorage.Events:FindFirstChild("PlayerKilled")
 
 
+-- client variables
 local status = 0 -- status of the player, 0 = waiting, 1 = in game, 2 = dead
 
--- initiating camera
 local controller = CameraController.new(player, workspace.CurrentCamera)
-controller:SetMode(FollowMode)
 
-controller:Start()
 
 InputServise.InputBegan:Connect(function(input, gameProcessed)
 	if not gameProcessed and input.KeyCode == Enum.KeyCode.B then
-		game.ReplicatedStorage.Events.BombSpawn:FireServer() -- triggers the bomb spawn on server side
+		game.ReplicatedStorage.Events.BombSpawn:FireServer()
 	end
 end)
 
--- event sequence when bomb exploded near the player
 BombExplosion.OnClientEvent:Connect(function(msg)
 	if msg == "BombExploded" then
 		local effect = ExplosionEffect.new(2, 1)
@@ -38,8 +34,20 @@ BombExplosion.OnClientEvent:Connect(function(msg)
 	end
 end)
 
--- event sequence when player died
+RoundEvent.OnClientEvent:Connect(function(msg, data)
+	if msg == "RoundStart" then
+		controller:SetMode(FollowMode)
+		
+		controller:Start()
+	end
+	
+	if msg == "RoundEnd" then
+		if controller.IsActive then
+			controller:RestoreDefaultCamera()
+		end
+	end
+end)
+
 PlayerKilledEvent.OnClientEvent:Connect(function()
-	status = 2
 	controller:RestoreDefaultCamera()
 end)

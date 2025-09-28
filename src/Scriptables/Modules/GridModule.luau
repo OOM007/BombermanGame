@@ -6,16 +6,17 @@ function GridModule.new(gridOrigin:Vector3, gridSize:Vector2, cellSize:number)
 	local self = {}
 	setmetatable(self, meta)
 	
-	self.origin = gridOrigin -- 0,0 position of the grid
+	self.origin = gridOrigin
 	self.size = gridSize
 	self.cell = cellSize
 	
-	self.data = {} -- 2D array of the grid
+	self.data = {}
 	
 	self.instances = {}
 	
 	return self
 end
+
 
 function meta:InitiateGrid()
 	for x = 1, self.size.X do
@@ -33,6 +34,7 @@ function meta:InitiateGrid()
 	end
 end
 
+
 function meta:GetWorldPosition(gridPos:Vector2)
 	local x = self.origin.X + (gridPos.X - 1) * self.cell
 	local y = self.origin.Z + (gridPos.Y - 1) * self.cell
@@ -40,12 +42,14 @@ function meta:GetWorldPosition(gridPos:Vector2)
 	return Vector3.new(x, self.origin.Y, y)
 end
 
+
 function meta:GetCellPosition(worldPos:Vector3)
 	local x = math.floor((worldPos.X - self.origin.X) / self.cell) + 1
 	local y = math.floor((worldPos.Z - self.origin.Z) / self.cell) + 1
 	
 	return Vector2.new(x, y)
 end
+
 
 function meta:GetState(gridPos:Vector2)
 	local state = nil
@@ -55,6 +59,7 @@ function meta:GetState(gridPos:Vector2)
 	
 	return state
 end
+
 
 function meta:SpawnField()
 	self.instances = {}
@@ -85,17 +90,26 @@ function meta:SpawnField()
 	end
 end
 
+
 function meta:ClearCell(cellPos:Vector2)
 	self.data[cellPos.X][cellPos.Y] = 0
 	
 	local cell = self.instances[cellPos.X][cellPos.Y]
 	if cell then
 		self.instances[cellPos.X][cellPos.Y]:Destroy()
-		self.instances[cellPos.X][cellPos.Y] = 0
+		self.instances[cellPos.X][cellPos.Y] = nil
 	end
 end
 
---printing the grid for debuging
+function meta:ClearAllCells()
+	for x = 1, self.size.X do
+		for y = 1, self.size.Y do
+			self:ClearCell(Vector2.new(x, y))
+		end
+	end
+end
+
+
 function meta:__tostring()
 	local lines = {}
 	for row = 1, self.size.X do
@@ -109,3 +123,10 @@ function meta:__tostring()
 end
 
 return GridModule
+
+
+
+-- explanation of notation:
+-- 1: wall
+-- 2: box
+-- 0: empty

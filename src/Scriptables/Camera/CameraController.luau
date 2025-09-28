@@ -16,13 +16,12 @@ function CameraController.new(player: Player, camera: Camera)
 	return self
 end
 
--- setting up mode of the camera
 function CameraController:SetMode(modeModule)
 	if self.mode then
-		pcall(function() self.mode:Exit() end) -- catching possible errors
+		pcall(function() self.mode:Exit() end)
 	end
 	
-	local ok, modeOrErr = pcall(function() -- mode or Err: Returns mode if there wasn't any errors. Otherwise it is an error code
+	local ok, modeOrErr = pcall(function()
 		return modeModule.new(self.player)
 	end)
 	
@@ -35,7 +34,6 @@ function CameraController:SetMode(modeModule)
 	end
 end
 
--- effects for the camera (explosion, fatigue, etc.)
 function CameraController:AddEffect(effect: Enum)
 	table.insert(self.effects, effect)
 end
@@ -55,9 +53,10 @@ function CameraController:Update(dt: number)
 		return
 	end
 	
+	-- effects
 	for _, effect in self.effects  do
 		
-		local ok, c, p = pcall(function() -- in case of error, c is an error code. otherwise it is a CFrame for next frame
+		local ok, c, p = pcall(function()
 			return effect:Apply(camCFrame, CamSettings, dt)
 		end)
 		
@@ -85,6 +84,7 @@ function CameraController:RestoreDefaultCamera()
 end
 
 function CameraController:Start()
+	self.IsActive = true
 	RunService:BindToRenderStep("CustomCamera", Enum.RenderPriority.Camera.Value, function(dt)
 		self:Update(dt)
 	end)
