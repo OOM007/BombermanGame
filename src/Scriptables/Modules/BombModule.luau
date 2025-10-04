@@ -1,6 +1,25 @@
 local BombModule = {}
-local meta = {}
-meta.__index = meta
+local BombModule = {}
+BombModule.__index = BombModule
+
+type BombInfo = {
+	pos: number,
+	explodeAt: number,
+	range: number,
+	instance: Model
+}
+
+export type BombModule = {
+	queue: {BombInfo},
+	grid: GridModule,
+	new: (grid: GridModule) -> BombModule,
+	CanSpawn: (self: BombModule, position: Vector3) -> boolean,
+	SpawnBomb: (self: BombModule, pos: Vector3, fuseTime: number, explosionPower: number?, player: Player?) -> Model,
+	Explode: (self: BombModule, bomb: BombInfo) -> {any},
+	DestroyInDirection: (self: BombModule, startPos: Vector2, dir: Vector2, range: number) -> {any},
+	Update: (self: BombModule) -> (boolean, {any}),
+}
+
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local EffectControl = require(ReplicatedStorage.Scriptables.Modules.EffectControl)
@@ -9,19 +28,43 @@ local TableUtil = require(ReplicatedStorage.Scriptables.Utils.TableUtil)
 
 local BOMB = ReplicatedStorage.Models.Bomb
 
-function BombModule.new(grid)
-	local self = setmetatable ({}, meta)
+local lastBombTime = {} -- for anti-spamming
+local cooldown = 3
+
+
+function BombModule.new(grid: GridModule) : BombModule
+	local self = setmetatable ({}, BombModule)
 	self.queue = {}
 	self.grid = grid
 	
 	return self
 end
+ 
+ 
+function BombModule:CanSpawn(player: Player)
+	local playerPos = player.Character.PrimaryPart.Position
+	local fieldPos = {self.grid.origin, self.grid:GetWorldPosition(self.grid.size)}
+	
+	local now = tick()
+	
+	if lastBombTime[player] and now - lastBombTime[player] < cooldown then
+		return false
+	end
+	
+	return playerPos.X >= fieldPos[1].X-1 and playerPos.X <= fieldPos[2].X+1
+		and playerPos.Z >= fieldPos[1].Z-1 and playerPos.Z <= fieldPos[2].Z+1
+end
 
-function meta:SpawnBomb(pos:Vector3, fuseTime:number, explosionPower:number)
+
+function BombModule:SpawnBomb(pos: Vector3, fuseTime:number, explosionPower:number, player: Player?) : Model
+	if player then
+		if not self:CanSpawn(player) then return end
+		lastBombTime[player] = tick()
+	end
+	
 	local bomb = BOMB:Clone()
 	bomb.Parent = game.Workspace
 	
-	-- bomb's information
 	local bombInfo = {pos = Vector3.new(
 		math.floor(pos.X/self.grid.cell + 0.5)*self.grid.cell, 2.5, math.floor(pos.Z/self.grid.cell + 0.5)*self.grid.cell),
 		explodeAt = os.clock()+fuseTime,
@@ -35,7 +78,8 @@ function meta:SpawnBomb(pos:Vector3, fuseTime:number, explosionPower:number)
 	return bomb
 end
 
-function meta:Explode(bomb: table)
+
+function BombModule:Explode(bomb: BombInfo) : {any}
 	if bomb and bomb.instance.PrimaryPart then
 		local ExplodedCells = {}
 		
@@ -54,16 +98,16 @@ function meta:Explode(bomb: table)
 	end
 end
 
-function meta:DestroyInDirection(startPos: Vector2, dir: Vector2, range: number)
+function BombModule:DestroyInDirection(startPos: Vector2, dir: Vector2, range: number) : {any}
 	local pos = startPos
-	local coords = {} -- coordinates of destroyed cells
+	local coords = {}
 	
 	for i = 1, range do
 		pos = pos + dir
 		
 		local state = self.grid:GetState(pos)
 		
-		-- if the position is out of bounds or it is a wall, break
+		
 		if state == nil or state == 1 then
 			break
 		end
@@ -75,7 +119,8 @@ function meta:DestroyInDirection(startPos: Vector2, dir: Vector2, range: number)
 	
 end
 
-function meta:Update(grid)
+
+function BombModule:Update(grid) : (boolean, {any})
 	local now = os.clock()
 	local explosions = {}
 	local exploded = false

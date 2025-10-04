@@ -5,34 +5,18 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Networker = require(ReplicatedStorage.Scriptables.Packages.Networker)
 
-local RoundEvent = ReplicatedStorage.Events:FindFirstChild("RoundEvent")
-if not RoundEvent then
-	RoundEvent = Instance.new("RemoteEvent")
-	RoundEvent.Name = "RoundEvent"
-	RoundEvent.Parent = ReplicatedStorage.Events
-end
-
-
-local function updateClients(state, data)
-	local ok, err = pcall(function()
-		RoundEvent:FireAllClients(state, data)
-	end)
-	
-	if not ok then
-		warn("Error updating clients: " .. err)
-	end
-end
 
 local function resetPlayers(self)
 	for _, player in pairs(Players:GetPlayers()) do
-		if not player.Character and not player.Character.PrimaryPart then
+		if not player.Character or not player.Character.PrimaryPart then
 			continue
 		end
 
-        player.Character.PrimaryPart.CFrame = CFrame.new(
-		    self.spawnLocation.X + math.random(-5, 5), self.spawnLocation.Y, self.spawnLocation.Z + math.random(-5, 5))
-			
+		player.Character.PrimaryPart.CFrame = CFrame.new(
+			self.spawnLocation.X + math.random(-5, 5), self.spawnLocation.Y, self.spawnLocation.Z + math.random(-5, 5))
+
 		local humanoid = player.Character:FindFirstChild("Humanoid")	
 		if humanoid then
 			humanoid.Health = 100
@@ -41,7 +25,6 @@ local function resetPlayers(self)
 end
 
 
--- BFS to find the nearest free cell
 local function findFreeCell(start: Vector2, grid: GridModule)
 	local queue = {start}
 	local visited = {}
@@ -63,7 +46,7 @@ local function findFreeCell(start: Vector2, grid: GridModule)
 		for _, dir in pairs(directions) do
 			local nx, ny = current.X + dir.X, current.Y + dir.Y
 			
-			if nx <= 0 and nx > grid.size.X and ny <= 0 and ny > grid.size.Y then
+			if nx <= 0 or nx > grid.size.X or ny <= 0 or ny > grid.size.Y then
 				continue
 			end
 			
@@ -158,7 +141,7 @@ function RoundManager:StartIntermission(t: number)
 	
 	for t = t, 1, -1 do
 		print("intermission: "..t)
-		updateClients("Intermission", t)
+		Networker.FireAllClients("RoundEvent", "Intermission", t)
 		task.wait(1)
 	end
 	
@@ -167,6 +150,7 @@ end
 
 
 function RoundManager:StartRound(t:number)
+	local t = t or 10
 	self.state = "RoundActive"
 	
 	if #self.grid.data >= 1 then
@@ -179,16 +163,15 @@ function RoundManager:StartRound(t:number)
 	self:ResetAlivePlayers()
 	spawnPlayers(self)
 	
-	updateClients("RoundStart")
+	Networker.FireAllClients("RoundEvent", "RoundStart")
 	
 	local roundTime = t
 	local accumulator = 0
-	local connection
-
-    -- main round loop
-	connection = RunService.Heartbeat:Connect(function(dt)
+	local connction
+		
+	connction = RunService.Heartbeat:Connect(function(dt)
 		if self.state ~= "RoundActive" then
-			connection:Disconnect()
+			connction:Disconnect()
 			return
 		end
 		
@@ -196,12 +179,12 @@ function RoundManager:StartRound(t:number)
 		accumulator += dt
 		
 		if accumulator >= 1 then
-			updateClients("RoundTimer", math.ceil(roundTime))
+			Networker.FireAllClients("RoundTimer", math.ceil(roundTime))
 			accumulator = 0
 		end
 		
 		if roundTime <= 0 or self:CheckWinCondition() then
-			connection:Disconnect()
+			connction:Disconnect()
 			self:EndRound()
 		end
 		
@@ -209,10 +192,9 @@ function RoundManager:StartRound(t:number)
 	
 end
 
-
 function RoundManager:EndRound()
-	self.State = "RoundEnd"
-	updateClients("RoundEnd")
+	self.state = "RoundEnd"
+	Networker.FireAllClients("RoundEvent", "RoundEnd")
 	
 	
 	resetPlayers(self)
@@ -223,6 +205,13 @@ end
 
 return RoundManager
 
+
+
+--States:
+-- Idle
+-- Intermission
+-- RoundActive
+-- RoundEnd
 
 
 -- Messeges that may be thrown:

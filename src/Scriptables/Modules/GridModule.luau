@@ -1,10 +1,30 @@
 local GridModule = {}
-local meta = {}
-meta.__index = meta
+GridModule.__index = GridModule
 
-function GridModule.new(gridOrigin:Vector3, gridSize:Vector2, cellSize:number)
+
+type GridModule = {
+	origin: Vector3,
+	size: Vector2,
+	cell: number,
+	data: {{CellType}},
+	instances: {{Instance?}},
+
+	new: (gridOrigin: Vector3, gridSize: Vector2, cellSize: number) -> GridModule,
+	InitiateGrid: (self: GridModule) -> (),
+	GetWorldPosition: (self: GridModule, gridPos: Vector2) -> Vector3,
+	GetCellPosition: (self: GridModule, worldPos: Vector3) -> Vector2,
+	GetState: (self: GridModule, gridPos: Vector2) -> CellType?,
+	SpawnField: (self: GridModule) -> (),
+	ClearCell: (self: GridModule, cellPos: Vector2) -> (),
+	ClearAllCells: (self: GridModule) -> (),
+	__tostring: (self: GridModule) -> string,
+}
+
+
+function GridModule.new(gridOrigin:Vector3, gridSize:Vector2, cellSize:number) : GridModule
+	
 	local self = {}
-	setmetatable(self, meta)
+	setmetatable(self, GridModule)
 	
 	self.origin = gridOrigin
 	self.size = gridSize
@@ -18,7 +38,7 @@ function GridModule.new(gridOrigin:Vector3, gridSize:Vector2, cellSize:number)
 end
 
 
-function meta:InitiateGrid()
+function GridModule:InitiateGrid() : ()
 	for x = 1, self.size.X do
 		self.data[x] = {}
 		
@@ -35,7 +55,7 @@ function meta:InitiateGrid()
 end
 
 
-function meta:GetWorldPosition(gridPos:Vector2)
+function GridModule:GetWorldPosition(gridPos:Vector2) : Vector3
 	local x = self.origin.X + (gridPos.X - 1) * self.cell
 	local y = self.origin.Z + (gridPos.Y - 1) * self.cell
 	
@@ -43,7 +63,7 @@ function meta:GetWorldPosition(gridPos:Vector2)
 end
 
 
-function meta:GetCellPosition(worldPos:Vector3)
+function GridModule:GetCellPosition(worldPos:Vector3) : Vector2
 	local x = math.floor((worldPos.X - self.origin.X) / self.cell) + 1
 	local y = math.floor((worldPos.Z - self.origin.Z) / self.cell) + 1
 	
@@ -51,7 +71,7 @@ function meta:GetCellPosition(worldPos:Vector3)
 end
 
 
-function meta:GetState(gridPos:Vector2)
+function GridModule:GetState(gridPos:Vector2) : CellType
 	local state = nil
 	if gridPos.X > 0 and gridPos.X <= self.size.X then
 		state = self.data[gridPos.X][gridPos.Y]
@@ -61,7 +81,7 @@ function meta:GetState(gridPos:Vector2)
 end
 
 
-function meta:SpawnField()
+function GridModule:SpawnField() : ()
 	self.instances = {}
 	
 	for x = 1, self.size.X do
@@ -91,7 +111,7 @@ function meta:SpawnField()
 end
 
 
-function meta:ClearCell(cellPos:Vector2)
+function GridModule:ClearCell(cellPos:Vector2) : ()
 	self.data[cellPos.X][cellPos.Y] = 0
 	
 	local cell = self.instances[cellPos.X][cellPos.Y]
@@ -101,7 +121,7 @@ function meta:ClearCell(cellPos:Vector2)
 	end
 end
 
-function meta:ClearAllCells()
+function GridModule:ClearAllCells()
 	for x = 1, self.size.X do
 		for y = 1, self.size.Y do
 			self:ClearCell(Vector2.new(x, y))
@@ -110,7 +130,7 @@ function meta:ClearAllCells()
 end
 
 
-function meta:__tostring()
+function GridModule:__tostring() : string
 	local lines = {}
 	for row = 1, self.size.X do
 		local line = {}

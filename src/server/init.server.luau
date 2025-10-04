@@ -8,6 +8,8 @@ local EffectControl = require(ReplicatedStorage.Scriptables.Modules.EffectContro
 local CombatModule = require(ReplicatedStorage.Scriptables.Modules.CombatModule)
 local RoundManager = require(ReplicatedStorage.Scriptables.Modules.RoundManager)
 
+local Networker = require(ReplicatedStorage.Scriptables.Packages.Networker)
+
 local BombSpawnEvent = ReplicatedStorage.Events:FindFirstChild("BombSpawn")
 local BombExplosionEvent = ReplicatedStorage.Events:FindFirstChild("BombExplosion")
 local PlayerKilledEvent = ReplicatedStorage.Events:FindFirstChild("PlayerKilled")
@@ -16,37 +18,42 @@ local PlayerKilledEvent = ReplicatedStorage.Events:FindFirstChild("PlayerKilled"
 local bombRange = 2
 local bombTimer = 2
 local gridSize = 8
+local cooldown = 3
 
 
 local grid = GridModule.new(Vector3.new(48, 2, -32), Vector2.new(11, 17), gridSize)
 local bomb = BombModule.new(grid)
 
 
-local roundManager = RoundManager.new(grid, Vector3.new(86, 2, -86), 60)
+local roundManager = RoundManager.new(grid, Vector3.new(86, 2, -86), 30)
 
 
--- testing
-roundManager:StartIntermission(5)
+local lastBombTime = {}
 
-
-BombSpawnEvent.OnServerEvent:Connect(function(player)
+Networker.OnServer("BombSpawn", function(player)
 	local playerPos = player.Character.PrimaryPart.Position
+	
+	if roundManager.state ~= "RoundActive" then
+		return
+	end
+	
 	local fieldPos = {grid.origin, grid:GetWorldPosition(grid.size)}
 	
-	--checks if player are in the gamefield
-	if playerPos.X >= fieldPos[1].X-1 and playerPos.X <= fieldPos[2].X+1 then
-		if playerPos.Z >= fieldPos[1].Z-1 and playerPos.Z <= fieldPos[2].Z+1 then
-			bomb:SpawnBomb(playerPos, bombTimer, bombRange) 
-		end
-	end
+	bomb:SpawnBomb(playerPos, bombTimer, bombRange, player)
+
 end)
+
+Networker.OnServer("StartGame", function()
+	roundManager:StartIntermission(5)
+end)
+
 
 -- bomb update loop
 RunService.Heartbeat:Connect(function(dt)
 	local exploded, infoList = bomb:Update(grid)
 	
 	if exploded then
-		BombExplosionEvent:FireAllClients("BombExploded")
+		Networker.FireAllClients("BombExplosion")
 	end
 	
 	for _, info in ipairs(infoList) do
@@ -62,7 +69,7 @@ RunService.Heartbeat:Connect(function(dt)
 			
 			for _, player in pairs(killed) do
 				roundManager:MarkAlive(player, false)
-				PlayerKilledEvent:FireClient(player)
+				Networker.FireClient(player, "PlayerKilled")
 			end
 		end
 	end

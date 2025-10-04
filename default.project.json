@@ -20,6 +20,9 @@
         },
         "Utils": {
           "$path": "src/Scriptables/Utils"
+        },
+        "Packages": {
+          "$path": "src/Scriptables/Packages"
         }
       }
     },
